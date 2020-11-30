@@ -6,6 +6,7 @@ DATA_PATH=$(jq --raw-output ".data_path" $CONFIG_PATH)
 ZIGBEE_SHEPHERD_DEBUG=$(jq --raw-output ".zigbee_shepherd_debug // empty" $CONFIG_PATH)
 ZIGBEE_HERDSMAN_DEBUG=$(jq --raw-output ".zigbee_herdsman_debug // empty" $CONFIG_PATH)
 ZIGBEE_SHEPHERD_DEVICES=$(jq --raw-output ".zigbee_shepherd_devices // empty" $CONFIG_PATH)
+ZIGBEE_HA_CONFIG=$(jq --raw-output ".zigbee_ha_config // empty" $CONFIG_PATH)
 
 # Check if config exists already
 mkdir -p $DATA_PATH
@@ -19,7 +20,7 @@ if [[ -f $DATA_PATH/configuration.yaml ]]; then
 fi
 
 # Parse config
-cat "$CONFIG_PATH" | jq 'del(.data_path, .zigbee_shepherd_debug, .zigbee_shepherd_devices, .socat)' \
+cat "$CONFIG_PATH" | jq 'del(.data_path, .zigbee_shepherd_debug, .zigbee_shepherd_devices, .zigbee_ha_config, .socat)' \
     | jq 'if .advanced.ext_pan_id_string then .advanced.ext_pan_id = (.advanced.ext_pan_id_string | (split(",")|map(tonumber))) | del(.advanced.ext_pan_id_string) else . end' \
     | jq 'if .advanced.network_key_string then .advanced.network_key = (.advanced.network_key_string | (split(",")|map(tonumber))) | del(.advanced.network_key_string) else . end' \
     | jq 'if .device_options_string then .device_options = (.device_options_string|fromjson) | del(.device_options_string) else . end' \
@@ -36,6 +37,15 @@ if [[ ! -z "$ZIGBEE_SHEPHERD_DEVICES" ]]; then
         cp -f "$DATA_PATH"/devices.js ./node_modules/zigbee-herdsman-converters/devices.js
     else
         echo "[Error] File $DATA_PATH/devices.js not found! Starting with default devices.js"
+    fi
+fi
+
+if [[ ! -z "$ZIGBEE_HA_CONFIG" ]]; then
+    echo "[Info] Searching for custom homeassistant file in zigbee2mqtt data path..." 
+    if [[ -f "$DATA_PATH"/homeassistant.js ]]; then
+        cp -f "$DATA_PATH"/homeassistant.js ./lib/extension/homeassistant.js
+    else
+        echo "[Error] File $DATA_PATH/homeassistant.js not found! Starting with default homeassistant.js"
     fi
 fi
 
